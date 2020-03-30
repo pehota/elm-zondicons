@@ -1,4 +1,3 @@
-const AdmZip = require("adm-zip");
 const fs = require("fs");
 const path = require("path");
 const tmpPath = path.resolve(`${__dirname}/tmp`);
@@ -24,7 +23,7 @@ const generateElmJson = () => {
   fs.writeFileSync(elmJsonFile, JSON.stringify(json));
 };
 
-const bootstrap = () => {
+const bootstrap = async () => {
   try {
     cleanUp();
     [tmpPath, elmPath].forEach((p) => {
@@ -35,41 +34,29 @@ const bootstrap = () => {
     if (!fs.existsSync(elmJsonFile)) {
       generateElmJson();
     }
-    return Promise.resolve();
   } catch (e) {
-    return Promise.reject(`Could not complete bootstrap: ${e}`);
+    return new Error(`Could not complete bootstrap: ${e}`);
   }
 };
 
-const fetchIconsArchive = () => {
-  try {
-    const archiveName = "zondicons.zip";
-    const srcArchivePath = `${__dirname}/${archiveName}`;
-    const dstArchivePath = `${tmpPath}/${archiveName}`;
+const fetchIcons = async () => {
+  const stream = require("stream");
+  const { promisify } = require("util");
+  const fetch = require("node-fetch");
+  const unzipper = require("unzipper");
+  const iconsUrl = "https://www.zondicons.com/zondicons.zip";
+  const archiveSavePath = `${tmpPath}/${basename(iconsUrl)}`;
+  const asyncStreamPipeline = promisify(stream.pipeline);
 
-    fs.copyFileSync(srcArchivePath, dstArchivePath);
+  const res = await fetch(iconsUrl);
 
-    return Promise.resolve(dstArchivePath);
-  } catch (e) {
-    return Promise.reject(`Could not fetch icons archive: ${e}`);
-  }
+  return asyncStreamPipeline(
+    res.body,
+    unzipper.Extract({ path: archiveSavePath })
+  ).then((_) => archiveSavePath);
 };
 
 const basename = (fileName) => path.basename(fileName, path.extname(fileName));
-
-const extractIcons = (archive) => {
-  if (!fs.existsSync(archive)) {
-    return Promise.reject("Could not find icons archive");
-  }
-  try {
-    const zip = new AdmZip(archive);
-    const extractionPath = `${tmpPath}/icons`;
-    zip.extractAllTo(extractionPath, true);
-    return Promise.resolve(`${extractionPath}/${basename(archive)}`);
-  } catch (e) {
-    return Promise.reject(`Could not extract icons: ${e}`);
-  }
-};
 
 const createModuleName = (name) => {
   return require("pascal-case").pascalCase(name);
@@ -119,40 +106,39 @@ const convertIcon = (iconsPath) => (icon) => {
 };
 const isSVGIcon = (file) => path.extname(file).toLowerCase() === ".svg";
 
-const convertIcons = (iconsPath) => {
+const convertIcons = async (iconsPath) => {
   try {
     const convert = convertIcon(iconsPath);
 
-    fs.readdirSync(iconsPath)
-      .filter(isSVGIcon)
-      .forEach(convert);
-    return Promise.resolve();
+    fs.readdirSync(iconsPath).forEach((file) => {
+      if (isSVGIcon(file)) {
+        convert(file);
+      }
+    });
   } catch (e) {
-    return Promise.reject(`Could not covert icons: ${e}`);
+    throw new Error(`Could not covert icons: ${e}`);
   }
 };
 
-const formatElm = () => {
+const formatElm = async () => {
   const { execSync } = require("child_process");
 
   try {
     execSync(`npx elm-format ${elmPath}/*.elm --yes`);
-    return Promise.resolve();
   } catch (e) {
-    return Promise.reject(`Could not format Elm files: ${e}`);
+    throw new Error(`Could not format Elm files: ${e}`);
   }
 };
 
-const updateElmJson = () => {
+const updateElmJson = async () => {
   try {
     const elmJson = require(elmJsonFile);
     elmJson["exposed-modules"] = fs
       .readdirSync(elmPath)
       .map((file) => `ZondIcons.${basename(file)}`);
     fs.writeFileSync(elmJsonFile, JSON.stringify(elmJson));
-    return Promise.resolve();
   } catch (e) {
-    return Promise.reject(`Could not update elm.json: ${e}`);
+    throw new Error(`Could not update elm.json: ${e}`);
   }
 };
 
@@ -161,8 +147,7 @@ const cleanUp = () => {
 };
 
 bootstrap()
-  .then(fetchIconsArchive)
-  .then(extractIcons)
+  .then(fetchIcons)
   .then(convertIcons)
   .then(formatElm)
   .then(updateElmJson)
