@@ -120,13 +120,15 @@ const convertIcons = async (iconsPath) => {
   }
 };
 
-const formatElm = async () => {
+const formatFiles = async () => {
   const { execSync } = require("child_process");
 
   try {
-    execSync(`npx elm-format ${elmPath}/*.elm --yes`);
+    execSync(
+      `npx elm-format ${elmPath}/*.elm --yes && npx prettier --write elm.json`
+    );
   } catch (e) {
-    throw new Error(`Could not format Elm files: ${e}`);
+    throw new Error(`Could not format files: ${e}`);
   }
 };
 
@@ -149,8 +151,8 @@ const cleanUp = () => {
 bootstrap()
   .then(fetchIcons)
   .then(convertIcons)
-  .then(formatElm)
   .then(updateElmJson)
+  .then(formatFiles)
   .catch((e) => {
     console.error(`failed to run the generator: ${e}`);
   })
