@@ -1,26 +1,34 @@
 const fs = require("fs");
 const path = require("path");
 const tmpPath = path.resolve(`${__dirname}/tmp`);
-const elmPath = path.resolve(`${__dirname}/../src/ZondIcons/`);
+const elmPath = path.resolve(`${__dirname}/../src/`);
 const elmJsonFile = path.resolve(`${__dirname}/../elm.json`);
+const elmModuleName = "ZondIcons";
 
 const execShell = (command) => {
   return require("child_process").execSync(command);
 };
 
 const generateElmJson = () => {
-  execShell("yes | npx elm init");
-
-  const json = require(elmJsonFile);
-  json.type = "package";
-  delete json["source-directories"];
-  json["elm-version"] = "0.19.0 <= v < 0.20.0";
-  json.summary = "Zondicons Library";
-  json.license = "BSD-3-Clause";
-  json.name = "pehota/elm-zond-icons";
-  json.version = "1.0.0";
-  json["exposed-modules"] = [];
-  fs.writeFileSync(elmJsonFile, JSON.stringify(json));
+  const json = `
+{
+  "type": "package",
+  "summary": "Zondicons SVG Icons Library",
+  "license": "BSD-3-Clause",
+  "name": "pehota/elm-zond-icons",
+  "version": "1.0.0",
+  "exposed-modules": ["${elmModuleName}"],
+  "elm-version": "0.19.0 <= v < 0.20.0",
+  "dependencies": {
+    "elm/core": "1.0.0 <= v < 2.0.0",
+    "elm/html": "1.0.0 <= v < 2.0.0",
+    "elm/svg": "1.0.0 <= v < 2.0.0"
+  },
+  "test-dependencies": {}
+}
+  `;
+  fs.writeFileSync(elmJsonFile, json);
+  execShell("npx prettier --write elm.json");
 };
 
 const bootstrap = async () => {
@@ -39,108 +47,104 @@ const bootstrap = async () => {
   }
 };
 
+const wait = (duration) => (...args) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(...args);
+    }, duration);
+  });
+};
+
 const fetchIcons = async () => {
   const stream = require("stream");
   const { promisify } = require("util");
   const fetch = require("node-fetch");
   const unzipper = require("unzipper");
-  const iconsUrl = "https://www.zondicons.com/zondicons.zip";
-  const archiveSavePath = `${tmpPath}/${basename(iconsUrl)}`;
+  const iconsUrl = "http://localhost:8080/zondicons.zip";
   const asyncStreamPipeline = promisify(stream.pipeline);
 
   const res = await fetch(iconsUrl);
 
-  return asyncStreamPipeline(
-    res.body,
-    unzipper.Extract({ path: archiveSavePath })
-  ).then((_) => archiveSavePath);
+  return asyncStreamPipeline(res.body, unzipper.Extract({ path: tmpPath }))
+    .then(wait(250))
+    .then(() => `${tmpPath}/${basename(iconsUrl)}`);
 };
 
 const basename = (fileName) => path.basename(fileName, path.extname(fileName));
 
-const createModuleName = (name) => {
-  return require("pascal-case").pascalCase(name);
+const createIconName = (name) => {
+  return require("camelcase")(name);
 };
 
-const createElmContent = ({ moduleName, imports, exports, body }) => {
-  const moduleExposing =
-    exports.kind === "SOME" ? `${exports.entries.join(", ")}` : "..";
-  const moduleImports = imports.map(({ module, exposing }) => {
-    return `import ${module} exposing (${
-      exposing.kind === "SOME" ? `${exposing.entries.join(", ")}` : ".."
-    })`;
-  });
-  return `
-module ${moduleName} exposing (${moduleExposing})
-
-${moduleImports.join("\n")}
-
-${body}
-    `;
+const createElmContent = ({ iconName, body, funcNames }) => {
+  return funcNames.reduce((acc, fn) => {
+    const ret = acc.replace(
+      new RegExp(`${fn}(:| )`, "gm"),
+      `${fn.replace("view", iconName)}$1`
+    );
+    return ret;
+  }, body);
 };
 
-const convertIcon = (iconsPath) => (icon) => {
-  const pathToIcon = `${iconsPath}/${icon}`;
-  const moduleName = createModuleName(basename(icon));
-  const elmModulePath = `${elmPath}/${moduleName}.elm`;
-  const convertor = require("svg-to-elm").default;
+const convertIcon = (iconsPath) => async (icon) => {
+  const iconName = createIconName(basename(icon));
 
-  convertor.parse(pathToIcon, { moduleName: elmModulePath }).then((res) => {
+  try {
+    const pathToIcon = `${iconsPath}/${icon}`;
+    const convertor = require("svg-to-elm").default;
+    const res = await convertor.parse(pathToIcon, { moduleName: iconName });
+
     if (!res.success) {
       throw new Error(res.message);
     }
 
-    try {
-      const elmContent = createElmContent({
-        moduleName: `ZondIcons.${moduleName}`,
-        imports: res.imports,
-        body: res.viewBody,
-        exports: res.moduleExposing,
-      });
-
-      fs.writeFileSync(elmModulePath, elmContent);
-    } catch (e) {
-      throw new Error(`Could not write Elm (${elmModulePath}): ${e}`);
-    }
-  });
+    return createElmContent({
+      iconName,
+      body: res.viewBody,
+      funcNames: res.moduleExposing.entries || [],
+    });
+  } catch (e) {
+    throw new Error(`Could not convert ${icon}: ${e}`);
+  }
 };
+
 const isSVGIcon = (file) => path.extname(file).toLowerCase() === ".svg";
 
 const convertIcons = async (iconsPath) => {
   try {
     const convert = convertIcon(iconsPath);
 
-    fs.readdirSync(iconsPath).forEach((file) => {
-      if (isSVGIcon(file)) {
-        convert(file);
-      }
-    });
+    const buffer = await Promise.all(
+      fs.readdirSync(iconsPath).reduce((acc, file) => {
+        if (isSVGIcon(file)) {
+          return [...acc, convert(file)];
+        }
+        return acc;
+      }, [])
+    );
+    const elmContent = `
+module ${elmModuleName} exposing (..)
+
+import Html exposing (Html)
+import Svg exposing (..)
+import Svg.Attributes exposing (..)
+
+${buffer.join("\n")}
+    `;
+
+    fs.writeFileSync(`${elmPath}/${elmModuleName}.elm`, elmContent);
   } catch (e) {
-    throw new Error(`Could not covert icons: ${e}`);
+    throw new Error(`Could not convert icons: ${e}`);
   }
 };
 
-const formatFiles = async () => {
+const formatElm = async () => {
   const { execSync } = require("child_process");
 
   try {
-    execSync(
-      `npx elm-format ${elmPath}/*.elm --yes && npx prettier --write elm.json`
-    );
+    execSync(`npx elm-format ${elmPath}/*.elm --yes`);
   } catch (e) {
     throw new Error(`Could not format files: ${e}`);
-  }
-};
-
-const updateElmJson = async () => {
-  try {
-    const elmJson = require(elmJsonFile);
-    elmJson["exposed-modules"] = fs
-      .readdirSync(elmPath)
-      .map((file) => `ZondIcons.${basename(file)}`);
-    fs.writeFileSync(elmJsonFile, JSON.stringify(elmJson));
-  } catch (e) {
-    throw new Error(`Could not update elm.json: ${e}`);
   }
 };
 
@@ -151,8 +155,7 @@ const cleanUp = () => {
 bootstrap()
   .then(fetchIcons)
   .then(convertIcons)
-  .then(updateElmJson)
-  .then(formatFiles)
+  .then(formatElm)
   .catch((e) => {
     console.error(`failed to run the generator: ${e}`);
   })
