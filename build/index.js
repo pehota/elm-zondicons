@@ -1,34 +1,38 @@
 const fs = require("fs");
 const path = require("path");
+const childProcess = require("child_process");
+const stream = require("stream");
+const { promisify } = require("util");
+const fetch = require("node-fetch");
+const unzipper = require("unzipper");
+const camelCase = require("camelcase");
+const svgToElmConvertor = require("svg-to-elm").default;
 const tmpPath = path.resolve(`${__dirname}/tmp`);
 const elmPath = path.resolve(`${__dirname}/../src/`);
 const elmJsonFile = path.resolve(`${__dirname}/../elm.json`);
 const elmModuleName = "ZondIcons";
 
 const execShell = (command) => {
-  return require("child_process").execSync(command);
+  return childProcess.execSync(command);
 };
 
 const generateElmJson = () => {
-  const json = `
-{
-  "type": "package",
-  "summary": "Zondicons SVG Icons Library",
-  "license": "BSD-3-Clause",
-  "name": "pehota/elm-zond-icons",
-  "version": "1.0.0",
-  "exposed-modules": ["${elmModuleName}"],
-  "elm-version": "0.19.0 <= v < 0.20.0",
-  "dependencies": {
-    "elm/core": "1.0.0 <= v < 2.0.0",
-    "elm/html": "1.0.0 <= v < 2.0.0",
-    "elm/svg": "1.0.0 <= v < 2.0.0"
-  },
-  "test-dependencies": {}
-}
-  `;
-  fs.writeFileSync(elmJsonFile, json);
-  execShell("npx prettier --write elm.json");
+  const json = {
+    type: "package",
+    summary: "Zondicons SVG Icons Library",
+    license: "CC-BY-4.0",
+    name: "pehota/elm-zond-icons",
+    version: "1.0.0",
+    "exposed-modules": ["${elmModuleName}"],
+    "elm-version": "0.19.0 <= v < 0.20.0",
+    dependencies: {
+      "elm/core": "1.0.0 <= v < 2.0.0",
+      "elm/html": "1.0.0 <= v < 2.0.0",
+      "elm/svg": "1.0.0 <= v < 2.0.0",
+    },
+    "test-dependencies": {},
+  };
+  fs.writeFileSync(elmJsonFile, JSON.stringify(json, null, 2));
 };
 
 const bootstrap = async () => {
@@ -56,10 +60,6 @@ const wait = (duration) => (...args) => {
 };
 
 const fetchIcons = async () => {
-  const stream = require("stream");
-  const { promisify } = require("util");
-  const fetch = require("node-fetch");
-  const unzipper = require("unzipper");
   const iconsUrl = "https://www.zondicons.com/zondicons.zip";
   const asyncStreamPipeline = promisify(stream.pipeline);
 
@@ -73,7 +73,7 @@ const fetchIcons = async () => {
 const basename = (fileName) => path.basename(fileName, path.extname(fileName));
 
 const createIconName = (name) => {
-  return require("camelcase")(name);
+  return camelCase(name);
 };
 
 const createElmContent = ({ iconName, body, funcNames }) => {
@@ -91,8 +91,9 @@ const convertIcon = (iconsPath) => async (icon) => {
 
   try {
     const pathToIcon = `${iconsPath}/${icon}`;
-    const convertor = require("svg-to-elm").default;
-    const res = await convertor.parse(pathToIcon, { moduleName: iconName });
+    const res = await svgToElmConvertor.parse(pathToIcon, {
+      moduleName: iconName,
+    });
 
     if (!res.success) {
       throw new Error(res.message);
@@ -139,10 +140,8 @@ ${buffer.join("\n")}
 };
 
 const formatElm = async () => {
-  const { execSync } = require("child_process");
-
   try {
-    execSync(`npx elm-format ${elmPath}/*.elm --yes`);
+    execShell(`npx elm-format ${elmPath}/*.elm --yes`);
   } catch (e) {
     throw new Error(`Could not format files: ${e}`);
   }
