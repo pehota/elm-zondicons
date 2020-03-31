@@ -17,7 +17,7 @@ const generateElmJson = () => {
   delete json["source-directories"];
   json["elm-version"] = "0.19.0 <= v < 0.20.0";
   json.summary = "Zondicons Library";
-  json.license = "BSD-3-Clause";
+  json.license = "CC-BY-4.0";
   json.name = "pehota/elm-zond-icons";
   json.version = "1.0.0";
   json["exposed-modules"] = [];
