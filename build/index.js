@@ -12,10 +12,6 @@ const elmPath = path.resolve(`${__dirname}/../src/`);
 const elmJsonFile = path.resolve(`${__dirname}/../elm.json`);
 const elmModuleName = "ZondIcons";
 
-const execShell = (command) => {
-  return childProcess.execSync(command);
-};
-
 const generateElmJson = () => {
   const json = {
     type: "package",
@@ -35,7 +31,7 @@ const generateElmJson = () => {
   fs.writeFileSync(elmJsonFile, JSON.stringify(json, null, 2));
 };
 
-const bootstrap = async () => {
+const bootstrap = () => {
   try {
     cleanUp();
     [tmpPath, elmPath].forEach((p) => {
@@ -46,16 +42,15 @@ const bootstrap = async () => {
     if (!fs.existsSync(elmJsonFile)) {
       generateElmJson();
     }
+    return Promise.resolve();
   } catch (e) {
-    return new Error(`Could not complete bootstrap: ${e}`);
+    return Promise.reject(`Could not complete bootstrap: ${e}`);
   }
 };
 
-const wait = (duration) => (...args) => {
+const wait = (duration) => {
   return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(...args);
-    }, duration);
+    setTimeout(resolve, duration);
   });
 };
 
@@ -65,9 +60,9 @@ const fetchIcons = async () => {
 
   const res = await fetch(iconsUrl);
 
-  return asyncStreamPipeline(res.body, unzipper.Extract({ path: tmpPath }))
-    .then(wait(250))
-    .then(() => `${tmpPath}/${basename(iconsUrl)}`);
+  await asyncStreamPipeline(res.body, unzipper.Extract({ path: tmpPath }));
+  await wait(250);
+  return `${tmpPath}/${basename(iconsUrl)}`;
 };
 
 const basename = (fileName) => path.basename(fileName, path.extname(fileName));
@@ -96,16 +91,17 @@ const convertIcon = (iconsPath) => async (icon) => {
     });
 
     if (!res.success) {
-      throw new Error(res.message);
+      return Promise.reject(res.message);
     }
 
-    return createElmContent({
+    const elmContent = createElmContent({
       iconName,
       body: res.viewBody,
       funcNames: res.moduleExposing.entries || [],
     });
+    return Promise.resolve(elmContent);
   } catch (e) {
-    throw new Error(`Could not convert ${icon}: ${e}`);
+    return Promise.reject(`Could not convert ${icon}: ${e}`);
   }
 };
 
@@ -116,12 +112,12 @@ const convertIcons = async (iconsPath) => {
     const convert = convertIcon(iconsPath);
 
     const buffer = await Promise.all(
-      fs.readdirSync(iconsPath).reduce((acc, file) => {
-        if (isSVGIcon(file)) {
-          return [...acc, convert(file)];
-        }
-        return acc;
-      }, [])
+      fs
+        .readdirSync(iconsPath)
+        .reduce(
+          (acc, file) => (isSVGIcon(file) ? [...acc, convert(file)] : acc),
+          []
+        )
     );
     const elmContent = `
 module ${elmModuleName} exposing (..)
@@ -134,16 +130,18 @@ ${buffer.join("\n")}
     `;
 
     fs.writeFileSync(`${elmPath}/${elmModuleName}.elm`, elmContent);
+    return Promise.resolve();
   } catch (e) {
-    throw new Error(`Could not convert icons: ${e}`);
+    return Promise.reject(`Could not convert icons: ${e}`);
   }
 };
 
 const formatElm = async () => {
   try {
-    execShell(`npx elm-format ${elmPath}/*.elm --yes`);
+    childProcess.execSync(`npx elm-format ${elmPath}/*.elm --yes`);
+    return Promise.resolve();
   } catch (e) {
-    throw new Error(`Could not format files: ${e}`);
+    return Promise.reject(`Could not format files: ${e}`);
   }
 };
 
