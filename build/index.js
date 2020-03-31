@@ -71,14 +71,12 @@ const createIconName = (name) => {
   return camelCase(name);
 };
 
-const createElmContent = ({ iconName, body, funcNames }) => {
-  return funcNames.reduce((acc, fn) => {
-    const ret = acc.replace(
-      new RegExp(`${fn}(:| )`, "gm"),
-      `${fn.replace("view", iconName)}$1`
-    );
-    return ret;
-  }, body);
+const createElmContent = ({ iconName, body }) => {
+  const viewWithAttributesFn = "viewWithAttributes";
+  return body
+    .substring(body.indexOf(viewWithAttributesFn))
+    .trim()
+    .replace(new RegExp(viewWithAttributesFn, "g"), iconName);
 };
 
 const convertIcon = (iconsPath) => async (icon) => {
@@ -97,7 +95,6 @@ const convertIcon = (iconsPath) => async (icon) => {
     const elmContent = createElmContent({
       iconName,
       body: res.viewBody,
-      funcNames: res.moduleExposing.entries || [],
     });
     return Promise.resolve(elmContent);
   } catch (e) {
