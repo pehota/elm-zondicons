@@ -16,7 +16,7 @@ const generateElmJson = () => {
   const json = {
     type: "package",
     summary: "Zondicons SVG Icons Library",
-    license: "CC-BY-4.0",
+    license: "BSD-3-Clause",
     name: "pehota/elm-zond-icons",
     version: "1.0.0",
     "exposed-modules": ["${elmModuleName}"],
