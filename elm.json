@@ -2,7 +2,7 @@
   "type": "package",
   "summary": "Zondicons SVG Icons Library",
   "license": "BSD-3-Clause",
-  "name": "pehota/elm-zond-icons",
+  "name": "pehota/elm-zondicons",
   "version": "1.0.0",
   "exposed-modules": [
     "ZondIcons.AddOutline",
