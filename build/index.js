@@ -11,16 +11,16 @@ const svgToDataUrl = require("svg-to-dataurl");
 const tmpPath = path.resolve(`${__dirname}/tmp`);
 const elmPath = path.resolve(`${__dirname}/../src/`);
 const elmJsonFile = path.resolve(`${__dirname}/../elm.json`);
-const elmModuleName = "ZondIcons";
+const elmModuleName = "Zondicons";
 
 const generateElmJson = () => {
   const json = {
     type: "package",
     summary: "Zondicons SVG Icons Library",
     license: "BSD-3-Clause",
-    name: "pehota/elm-zond-icons",
+    name: "pehota/elm-zondicons",
     version: "1.0.0",
-    "exposed-modules": ["${elmModuleName}"],
+    "exposed-modules": [elmModuleName],
     "elm-version": "0.19.0 <= v < 0.20.0",
     dependencies: {
       "elm/core": "1.0.0 <= v < 2.0.0",
