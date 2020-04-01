@@ -108,22 +108,25 @@ const convertIcons = async (iconsPath) => {
   try {
     const convert = convertIcon(iconsPath);
 
-    const buffer = await Promise.all(
-      fs
-        .readdirSync(iconsPath)
-        .reduce(
-          (acc, file) => (isSVGIcon(file) ? [...acc, convert(file)] : acc),
-          []
-        )
-    );
+    const buffer = fs
+      .readdirSync(iconsPath)
+      .reduce(
+        (acc, file) =>
+          isSVGIcon(file)
+            ? { ...acc, [createIconName(basename(file))]: convert(file) }
+            : acc,
+        {}
+      );
+    const exports = Object.keys(buffer);
+    const declarations = await Promise.all(Object.values(buffer));
     const elmContent = `
-module ${elmModuleName} exposing (..)
+module ${elmModuleName} exposing (${exports.join(",")})
 
 import Html exposing (Html)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 
-${buffer.join("\n")}
+${declarations.join("\n")}
     `;
 
     fs.writeFileSync(`${elmPath}/${elmModuleName}.elm`, elmContent);
