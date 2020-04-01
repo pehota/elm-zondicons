@@ -7,6 +7,7 @@ const fetch = require("node-fetch");
 const unzipper = require("unzipper");
 const camelCase = require("camelcase");
 const svgToElmConvertor = require("svg-to-elm").default;
+const svgToDataUrl = require("svg-to-dataurl");
 const tmpPath = path.resolve(`${__dirname}/tmp`);
 const elmPath = path.resolve(`${__dirname}/../src/`);
 const elmJsonFile = path.resolve(`${__dirname}/../elm.json`);
@@ -71,12 +72,36 @@ const createIconName = (name) => {
   return camelCase(name);
 };
 
-const createElmContent = ({ iconName, body }) => {
+const createIconDefinition = ({ iconName, body }) => {
   const viewWithAttributesFn = "viewWithAttributes";
   return body
     .substring(body.indexOf(viewWithAttributesFn))
     .trim()
     .replace(new RegExp(viewWithAttributesFn, "g"), iconName);
+};
+
+const createIconDocs = async (iconFile) => {
+  const iconName = basename(iconFile);
+  const svgStr = fs.readFileSync(iconFile).toString();
+  const dataUri = svgToDataUrl(svgStr.replace("<svg", '<svg width="30px"'));
+  return `
+{-| Renders the \`${iconName}\` icon
+
+![${iconName}](${dataUri} "${iconName} preview")
+
+-}
+  `;
+};
+
+const createPackageDocs = (packageExports) => {
+  return `
+{-| This package is a port of Steve Schoger's Zondicons collection
+
+# Icons
+@docs ${packageExports.join(", ")}
+
+-}
+`;
 };
 
 const convertIcon = (iconsPath) => async (icon) => {
@@ -92,11 +117,16 @@ const convertIcon = (iconsPath) => async (icon) => {
       return Promise.reject(res.message);
     }
 
-    const elmContent = createElmContent({
+    const iconDefinition = createIconDefinition({
       iconName,
       body: res.viewBody,
     });
-    return Promise.resolve(elmContent);
+    const iconDocs = await createIconDocs(pathToIcon);
+
+    return Promise.resolve(`
+${iconDocs}
+${iconDefinition}
+    `);
   } catch (e) {
     return Promise.reject(`Could not convert ${icon}: ${e}`);
   }
@@ -121,6 +151,8 @@ const convertIcons = async (iconsPath) => {
     const declarations = await Promise.all(Object.values(buffer));
     const elmContent = `
 module ${elmModuleName} exposing (${exports.join(",")})
+
+${createPackageDocs(exports)}
 
 import Html exposing (Html)
 import Svg exposing (..)
