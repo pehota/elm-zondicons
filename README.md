@@ -33,3 +33,30 @@ customHtml model =
     Zondicons.addOutline [class "pretty-icon"]
   ]
 ```
+
+## Icons Color
+For convenience sake by default the icons will take the current color of their parent element.
+If this is not the desired behaviour it can be changed using the CSS `fill` propery and setting it to the desired value by either using a class or an inline style.
+
+```css
+.green-icon {
+  fill: green;
+}
+```
+
+And later in your Elm code
+
+```elm
+
+-- this will make the color of the icon green
+Zondicons.addOutline [ Svg.Attributes.class "green-icon" ]
+
+```
+
+or
+
+```elm
+
+-- this will make the color of the icon pink
+Zondicons.addOutline [ Svg.Attributes.style "pink" ]
+```
