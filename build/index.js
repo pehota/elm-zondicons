@@ -78,7 +78,8 @@ const createIconDefinition = ({ iconName, body }) => {
     .substring(body.indexOf(viewWithAttributesFn))
     .trim()
     .replace(new RegExp(viewWithAttributesFn, "g"), iconName)
-    .replace(new RegExp("Html.Attribute", "g"), "Svg.Attribute");
+    .replace(new RegExp("Html.Attribute", "g"), "Svg.Attribute")
+    .replace(/\[(viewBox\s+"[\s0-9]+")\]\s+\+\+/, "$1 ::");
 };
 
 const createIconDocs = async (iconFile) => {
