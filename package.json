@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "build/index.js",
   "author": "Dimitar Apostolov <d.apostolov@gmail.com>",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "scripts": {
     "build": "node build/index.js"
   },

@@ -77,7 +77,12 @@ const createIconDefinition = ({ iconName, body }) => {
   return body
     .substring(body.indexOf(viewWithAttributesFn))
     .trim()
-    .replace(new RegExp(viewWithAttributesFn, "g"), iconName);
+    .replace(new RegExp(viewWithAttributesFn, "g"), iconName)
+    .replace(new RegExp("Html.Attribute", "g"), "Svg.Attribute")
+    .replace(
+      /\[(viewBox\s+"[\s0-9]+")\]\s+\+\+/,
+      `$1 :: fill "currentColor" :: `
+    );
 };
 
 const createIconDocs = async (iconFile) => {
@@ -95,9 +100,64 @@ const createIconDocs = async (iconFile) => {
 
 const createPackageDocs = (packageExports) => {
   return `
-{-| This package is a port of Steve Schoger's Zondicons collection
+{-| A port of Steve Schoger's Zondicons collection
 
-# Icons
+## Customizing Icons Color
+For convenience sake by default the icons will take the current color of their parent element, so the preferred way to set colors would be to set something like \`color: green\` in CSS for the parent element.
+If this is not the desired behaviour, a different fill mode can be set using the \`fill\` attribute or \`fill\` CSS  propery of the icon.
+
+CSS: 
+
+    .parent-element {
+      color: red;
+    }
+
+And later in your Elm code
+
+    -- this will make the color of the icon red 
+    div[ class "parent-element" ] [
+      -- no need to do anything else - the color will trickle through to the icon
+      Zondicons.addOutline []
+    ]
+
+CSS:
+
+    .green-icon {
+      fill: green;
+    }
+
+And later in your Elm code
+
+    -- this will make the color of the icon green
+    Zondicons.addOutline [ Svg.Attributes.class "green-icon" ]
+
+or
+
+    -- this will make the color of the icon pink
+    Zondicons.addOutline [ Svg.Attributes.fill "pink" ]
+
+
+## Customizing Icons Size
+The icons \`viewBox\` is set to "0 0 20 20". To resize the icons set either \`width\` or \`height\` CSS property using either a class or an inline style. The icons' aspect ratio will be kept, so there is no need of specifying both properties.
+
+CSS:
+
+    .big-icon {
+      width: 50px;
+    }
+
+And later in your Elm code
+
+    -- this will render a 50px x 50px icon
+    Zondicons.addOutline [ Svg.Attributes.class "big-icon" ]
+
+or
+
+    -- this will render a 1rem x 1rem icon
+    Zondicons.addOutline [ Svg.Attributes.style "height: 1rem" ]
+
+
+## Icons
 @docs ${packageExports.join(", ")}
 
 -}
