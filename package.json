@@ -1,6 +1,6 @@
 {
   "name": "elm-zondicons",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "build/index.js",
   "author": "Dimitar Apostolov <d.apostolov@gmail.com>",
   "license": "BSD-3-Clause",

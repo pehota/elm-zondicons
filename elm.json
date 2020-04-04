@@ -1,16 +1,17 @@
 {
-  "type": "package",
-  "summary": "Zondicons SVG Icons Library",
-  "license": "BSD-3-Clause",
-  "name": "pehota/elm-zondicons",
-  "version": "1.0.0",
-  "exposed-modules": ["Zondicons"],
-  "elm-version": "0.19.0 <= v < 0.20.0",
-  "dependencies": {
-    "elm/core": "1.0.0 <= v < 2.0.0",
-    "elm/html": "1.0.0 <= v < 2.0.0",
-    "elm/svg": "1.0.0 <= v < 2.0.0"
-  },
-  "test-dependencies": {}
+    "type": "package",
+    "name": "pehota/elm-zondicons",
+    "summary": "Zondicons SVG Icons Library",
+    "license": "BSD-3-Clause",
+    "version": "1.0.1",
+    "exposed-modules": [
+        "Zondicons"
+    ],
+    "elm-version": "0.19.0 <= v < 0.20.0",
+    "dependencies": {
+        "elm/core": "1.0.0 <= v < 2.0.0",
+        "elm/html": "1.0.0 <= v < 2.0.0",
+        "elm/svg": "1.0.0 <= v < 2.0.0"
+    },
+    "test-dependencies": {}
 }
-
