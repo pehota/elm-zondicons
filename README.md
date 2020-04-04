@@ -30,6 +30,6 @@ type Model = ...
 customHtml: Model -> Html Msg
 customHtml model =
   div [] [
-    Zondicons.addOutline [class "pretty-icon"]
+    Zondicons.airplane [class "my-custom-icon"]
   ]
 ```

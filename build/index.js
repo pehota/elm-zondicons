@@ -90,9 +90,7 @@ const createIconDocs = async (iconFile) => {
   const svgStr = fs.readFileSync(iconFile).toString();
   const dataUri = svgToDataUrl(svgStr.replace("<svg", '<svg width="30px"'));
   return `
-{-| Renders the \`${iconName}\` icon
-
-![${iconName}](${dataUri} "${iconName} preview")
+{-| ![${iconName}](${dataUri} "${iconName} preview")
 
 -}
   `;
@@ -117,7 +115,7 @@ And later in your Elm code
     -- this will make the color of the icon red 
     div[ class "parent-element" ] [
       -- no need to do anything else - the color will trickle through to the icon
-      Zondicons.addOutline []
+      Zondicons.airplane []
     ]
 
 CSS:
@@ -129,12 +127,12 @@ CSS:
 And later in your Elm code
 
     -- this will make the color of the icon green
-    Zondicons.addOutline [ Svg.Attributes.class "green-icon" ]
+    Zondicons.airplane [ Svg.Attributes.class "green-icon" ]
 
 or
 
     -- this will make the color of the icon pink
-    Zondicons.addOutline [ Svg.Attributes.fill "pink" ]
+    Zondicons.airplane [ Svg.Attributes.fill "pink" ]
 
 
 ## Customizing Icons Size
@@ -149,12 +147,12 @@ CSS:
 And later in your Elm code
 
     -- this will render a 50px x 50px icon
-    Zondicons.addOutline [ Svg.Attributes.class "big-icon" ]
+    Zondicons.airplane [ Svg.Attributes.class "big-icon" ]
 
 or
 
     -- this will render a 1rem x 1rem icon
-    Zondicons.addOutline [ Svg.Attributes.style "height: 1rem" ]
+    Zondicons.airplane [ Svg.Attributes.style "height: 1rem" ]
 
 
 ## Icons
